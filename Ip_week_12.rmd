@@ -199,6 +199,7 @@ most of the people ranged between 23 and 52 years
 ```{r}
 var(age); sd(age)
 ```
+There is little deviation(8.8) in ages when moving from one consumer to the next
 ```{r}
 ggplot(advertising,aes(age))+ geom_density()
 ```
@@ -218,6 +219,7 @@ most people spent between 37.6 and 86 minutes in the site.
 ```{r}
 var(time_on_site); sd(time_on_site)
 ```
+There is some deviation(15.8) in time on site when moving from one consumer to the next, but given that it is totally dependent on preference it could be seen as a small deviation.
 ```{r}
 ggplot(advertising,aes(time_on_site))+ geom_histogram(fill='#222222')
 ```
@@ -250,10 +252,11 @@ most people were between 28275.30 and 73600.72 area income brackets
 ```{r}
 var(area_income); sd(area_income)
 ```
+There is a some deviation(13414) in area of income when moving from one consumer to the next, given that it is income .
 ```{r}
 ggplot(advertising,aes(area_income))+ geom_density()
 ```
-Thedensity plot is skewed to the right implying alot more people were above the median price bracket
+The density plot is skewed to the right implying alot more people were above the median price bracket
 ```{r}
 ggplot(advertising,aes(area_income))+ geom_histogram(fill = "#222222", colour = "#038b8d")
 ```
@@ -272,6 +275,7 @@ most people spent between 113.5 t0 246.7 minutes on the internet
 ```{r}
 var(internet_usage); sd(internet_usage)
 ```
+There is little deviation(43.9) on internet usage when moving from one consumer to the next
 ```{r}
 ggplot(advertising,aes(internet_usage))+ geom_density()
 ```
@@ -359,9 +363,6 @@ areas of income was fairly constant for those clicking ads, area of income may n
 time on site increases as area of income decreases meaning it could have an impact on retention of consumers
 ```{r}
 advert <- subset(advertising, select = c(1:4,10,12))
-cov(advert)
-```
-```{r}
 heatmap(cor(advert),Rowv = NA, Colv = NA,scale = "column", margins = c(10,10))
 ```
 <ul>
