@@ -1,0 +1,328 @@
+---
+title: "R Notebook"
+author: Ian
+date: 08/01/2021
+output: html_notebook
+---
+
+
+<h1><b>Specifying the question</b></h1>
+<p> To identify individuals likely to click on ads
+<h1>Metrics of success</h1>
+<p>The analysis will be successful if I can find individuals likely to click on the ads
+
+<h1>Context<h1/>
+<p>A Kenyan entrepreneur has created an online cryptography course and would want to advertise it on her blog.<br>
+She currently targets audiences originating from various countries. In the past,
+she ran ads to advertise a related course on the same blog and collected data in the process.<br>
+She has employed a Data Science Consultant to help her identify which individuals are most likely to click on her ads.
+<h1>Importing the dataset and libraries</h1>
+
+```{r imports}
+library('data.table')
+library('tidyverse')
+library('chron') # For working with datetime
+
+advertising <- fread('http://bit.ly/IPAdvertisingData')
+```
+Column descriptions
+<p>'Daily Time Spent on Site': consumer time on site in minutes
+<p>'Age': cutomer age in years
+<p>'Area Income': Avg. Income of geographical area of consumer
+<p>'Daily Internet Usage': Avg. minutes a day consumer is on the internet
+<p>'Ad Topic Line': Headline of the advertisement
+<p>'City': City of consumer
+<p>'Male': Whether or not consumer was male
+<p>'Country': Country of consumer
+<p>'Timestamp': Time at which consumer clicked on Ad or closed window
+<p>'Clicked on Ad': 0 or 1 indicated clicking on Ad</p>
+
+<p>previewing the top of the dataset
+
+```{r top_6}
+head(advertising)
+```
+<p>checking the datatypes of the columns in the dataset
+
+```{r data_types}
+str(advertising)
+```
+<p> Summary of the dataset
+
+```{r summary}
+summary(advertising)
+```
+<p> Checking for null values
+
+```{r null}
+colSums(is.na(advertising))
+```
+There were no null values in the dataset
+<p>Checking for Duplicates
+
+```{r}
+dim(advertising[duplicated(advertising)])
+```
+There were no duplicates found
+<p>spliting the timestamo column to date and time
+
+```{r time_Stamp_split}
+time_stamp <- advertising$Timestamp
+parts <- t(as.data.frame(strsplit(time_stamp,' ')))
+
+advertising$dates <- as.Date(parts[,1]) #saving dates
+advertising$times <- as.times(parts[,2])#saving time
+# view(advertising)
+```
+```{r col_assign}
+age <- advertising$Age
+area_income <- advertising$`Area Income`
+time_on_site <- advertising$`Daily Time Spent on Site`
+internet_usage <- advertising$`Daily Internet Usage`
+gender <- as.character(advertising$Male)
+ad <- as.character(advertising$`Clicked on Ad`)
+
+date <- advertising$dates
+time <- advertising$times
+country <- advertising$Country
+city <- advertising$City
+ad_topic <- advertising$`Ad Topic Line`
+```
+<h2>Checking for outliers</h2>
+
+```{r}
+boxplot(time_on_site)$out
+```
+No outliers in amount of time spent on the site
+```{r}
+boxplot(age)$out
+# outlier(advertising$Age)
+```
+No outliers in the ages of the users
+```{r}
+boxplot(area_income)$out
+# outlier(advertising$`Area Income`)
+```
+Some few outliers in the areas of income mostly the lower income areas, removing these may cause a loss of valuable information, hence will not be removed
+```{r}
+boxplot(internet_usage)$out
+# outlier(advertising$Age)
+```
+there were no outliers in the internate usage time
+```{r}
+boxplot(time)
+```
+There were no outliers in the time users were accessing or leaving the site
+```{r}
+boxplot(date)
+```
+There were no outliers in the dates users were accessing or leaving the site
+
+<h1><b>EDA</b></h1>
+**Univariate Analysis**
+
+```{r}
+get.mode <- function(v){
+  uniq <- unique(v)
+  # gets all the unique values in the column
+  # match (v, uniq) matches a value to the unique values and returns the index
+  # tabulate (match (v, uniq)) takes the values in uniq and counts the number of times each integer occurs in it.
+  # which.max() gets the index of the first maximum in the tabulated list
+  # then prints out the uniq value
+  uniq[ which.max (tabulate (match (v, uniq)))]
+}
+```
+```{r}
+mean(date); median(date); get.mode(date)
+```
+Access to the site was balanced with a bit more before april
+, moreover there being more activity in april than other months, specifically on fourth april
+```{r}
+max(date); min(date)
+```
+dates when users were accessing or leaving the site ranged from january 1 ,2016 and august 24 ,2016
+<p>The countries with the most consumers
+
+```{r}
+
+table.country <- table(country)
+view(table.country)
+table.country <- table.country[order(-table.country)]
+head(table.country)
+```
+The countries with the least consumers
+```{r}
+tail(table.country)
+```
+```{r}
+mean(age); median(age); get.mode(age)
+```
+most consumers were 31 years, with the average age at 36 years implying its skewed to the left
+```{r}
+max(age); min(age)
+```
+ages ranged from minimum( 19 ) to maximum( 61 ) years
+```{r}
+quantile(age,probs=c(0.05,0.95))
+```
+most of the people ranged between 23 and 52 years
+```{r}
+var(age); sd(age)
+```
+```{r}
+ggplot(advertising,aes(age))+ geom_density()
+```
+the ages are skewed to the left, alot of people are younger
+```{r}
+mean(time_on_site); median(time_on_site); get.mode(time_on_site)
+```
+average time on site was 65 minutes, with more people spending 62 minutes on site.
+```{r}
+max(time_on_site); min(time_on_site)
+```
+time on the site ranged from 32 to 91 minutes
+```{r}
+quantile(time_on_site,probs=c(0.05,0.95))
+```
+most people spent between 37.6 and 86 minutes in the site.
+```{r}
+var(time_on_site); sd(time_on_site)
+```
+```{r}
+ggplot(advertising,aes(time_on_site))+ geom_histogram(fill='#222222')
+```
+Time has two peaks around 40 and 80 minutes,showing two classes of consumers, ones who spend a longer time on site and those who spend less time.
+```{r}
+mean(time); median(time); get.mode(time)
+```
+The average time consumers accessed onr left the site was at noon, with most people accessing it at 5:39 pm
+```{r}
+max(time); min(time)
+```
+access times ranged all day (24 hours)
+```{r}
+quantile(time,probs=c(0.05,0.95))
+```
+most people accessed the site between 1:13 am and 22:49 pm
+
+```{r}
+mean(area_income); median(area_income); get.mode(area_income)
+```
+The average income area was at 55,000, while the income area with the most consumers was 61,833.9, since mean is lower than the median more consumers are above the midian
+```{r}
+max(area_income);min(area_income)
+```
+The areas of income ranged from 13996.5 to 79484.8
+```{r}
+quantile(area_income,probs=c(0.05,0.95))
+```
+most people were between 28275.30 and 73600.72 area income brackets
+```{r}
+var(area_income); sd(area_income)
+```
+```{r}
+ggplot(advertising,aes(area_income))+ geom_density()
+```
+Thedensity plot is skewed to the right implying alot more people were above the median price bracket
+```{r}
+ggplot(advertising,aes(area_income))+ geom_histogram(fill = "#222222", colour = "#038b8d")
+```
+```{r}
+mean(internet_usage); median(internet_usage); get.mode(internet_usage)
+```
+the average internet usage was 180 minutes, however alot of consumers spent 167.22 minutes online
+```{r}
+max(internet_usage); min(internet_usage)
+```
+The range of the time spent was from 104.78 to 269.96 minutes
+```{r}
+quantile(internet_usage,probs=c(0.05,0.95))
+```
+most people spent between 113.5 t0 246.7 minutes on the internet
+```{r}
+var(internet_usage); sd(internet_usage)
+```
+```{r}
+ggplot(advertising,aes(internet_usage))+ geom_density()
+```
+there were two peaks at around 125 and 225 minutes on the internet, showing two brackets of people spending different amounts of time on the internet
+```{r}
+ggplot(advertising,aes(internet_usage))+ geom_histogram(fill = "#222222", colour = "#038b8d")
+```
+```{r}
+ggplot(advertising,aes(gender))+ geom_bar()
+```
+There were more females who accessed the site
+```{r}
+ggplot(advertising,aes(ad))+ geom_bar(fill='#222222')
+```
+There was an equal number of people whoa accessed the site from both not clicking ads and clicking them
+
+<h2>Bivarriate</h2>
+
+```{r}
+# library('viridis')
+ggplot(advertising,aes(gender,fill=ad))+ geom_bar()
+```
+Most females accessing the site had clicked an ad while most males visiting the site had not clicked an ad
+```{r}
+ggplot(advertising,aes(internet_usage,time_on_site))+ geom_point()+
+  geom_quantile(color='black',size=0.9 ,alpha = 1)
+```
+People who spent more time on the internet tended to stay longer on the site
+```{r}
+ggplot(advertising,aes(internet_usage,time_on_site,color=ad))+geom_point()+geom_quantile(size=0.9 ,alpha = 1)
+```
+Most people who clicked on an ad spent less time on the site and the internet compared to those who did not click an add.
+However those who did not click an ad spent less time on the site the longer they spent on the internet
+```{r}
+ggplot(advertising,aes(age,internet_usage))+ geom_point()+ geom_quantile(color='black')
+```
+```{r}
+ggplot(advertising,aes(age,internet_usage,color=ad))+ geom_point()+ geom_quantile(quantiles=c(0.25,0.5,0.75))
+```
+```{r}
+ggplot(advertising,aes(age,time_on_site))+ geom_point()+ geom_quantile(quantiles=c(0.25,0.5,0.75),color='black')
+```
+```{r}
+ggplot(advertising,aes(age,time_on_site,color=ad))+ geom_point()+ geom_quantile(quantiles=c(0.25,0.5,0.75))
+```
+```{r}
+ggplot(advertising,aes(age,fill=ad,color='black'))+geom_histogram()
+```
+```{r}
+
+```
+```{r}
+ggplot(advertising,aes(age,area_income))+ geom_point()+
+  geom_quantile(color='black',size=0.9 ,alpha = 1)
+```
+```{r}
+ggplot(advertising,aes(age,area_income,color=ad))+ geom_point()+
+  geom_quantile(size=0.9 ,alpha = 1)
+```
+```{r}
+ggplot(advertising,aes(time_on_site,area_income))+ geom_point(alpha=0.5)+
+  geom_quantile(size=1 ,alpha = 1,color="#1abc9c")
+```
+```{r}
+ggplot(advertising,aes(time_on_site,area_income,color=ad))+ geom_point()+
+  geom_quantile(size=0.9 ,alpha = 1)
+```
+```{r}
+ggplot(advertising,aes(area_income, fill=ad,color='black'))+ geom_histogram()
+```
+```{r}
+ggplot(advertising,aes(time))+ geom_histogram(fill = "#222222", colour = "#038b8d")
+```
+```{r}
+ggplot(advertising,aes(date,fill=ad,color='black'))+ geom_histogram(bins=28)
+```
+```{r}
+advert <- advertising[,1:4]
+cov(advert)
+```
+```{r}
+# cor(advert)
+heatmap(cor(advert),Rowv = NA, Colv = NA)
+```
